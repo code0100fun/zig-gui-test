@@ -35,7 +35,7 @@ export async function incrementCounter(value: number): Promise<number> {
   try {
     // Call the Zig function and parse the result
     const result = await window.incrementCounter(JSON.stringify({ value }));
-
+    console.log('incrementCounter - result:', result);
     return result.result;
   } catch (error) {
     console.error('Error incrementing counter:', error);
@@ -51,6 +51,7 @@ export async function getCurrentTime(): Promise<number> {
   try {
     // Call the Zig function and parse the result
     const result = await window.getCurrentTime('{}');
+    console.log('getCurrentTime - result:', result);
     return result.timestamp;
   } catch (error) {
     console.error('Error getting current time:', error);
@@ -67,6 +68,7 @@ export async function sendMessageToZig(message: string): Promise<{ status: strin
   try {
     // Call the Zig function and parse the result
     const result = await window.sendMessageToZig(JSON.stringify({ message }));
+    console.log('sendMessageToZig - result:', result);
     return result;
   } catch (error) {
     console.error('Error sending message to Zig:', error);
