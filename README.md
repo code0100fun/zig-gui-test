@@ -1,5 +1,7 @@
 # Zig GUI Test
 
+![screenshot](docs/screenshot.png)
+
 ## Project Overview
 This is a GUI application built with Zig programming language that uses WebView for rendering a web-based UI. The frontend is built with React, TypeScript, and Tailwind CSS using the shadcn/ui component library.
 
