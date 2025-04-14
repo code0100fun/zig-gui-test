@@ -38,7 +38,7 @@
     .dependencies = .{
         .webview = .{
             .url = "https://github.com/code0100fun/webview-zig/archive/refs/heads/zig-0.14.0.tar.gz",
-            .hash = "webview-0.1.0-Q-hdwKwCIQBU8PYtK9iW0eO7hwnieNfl3tZURu0jgeds",
+            .hash = "webview-0.1.0-Q-hdwKsCIQA2GpP9-VXzBa854sIAmTAxQLgRFkIRPM7C",
         },
         // .webview = .{
         //     .path = "../webview-zig",
