@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { incrementCounter, toggleValue, getCurrentTime, sendMessageToZig, isBridgeAvailable } from './lib/zigBridge'
+import { incrementCounter, toggleValue, getCurrentTime, sendMessageToZig, sendStringToZig, isBridgeAvailable } from './lib/zigBridge'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -9,6 +9,8 @@ function App() {
   const [currentTime, setCurrentTime] = useState<number | null>(null)
   const [message, setMessage] = useState('')
   const [response, setResponse] = useState('')
+  const [stringMessage, setStringMessage] = useState('')
+  const [stringResponse, setStringResponse] = useState('')
   const [bridgeAvailable, setBridgeAvailable] = useState(false)
 
   // Check if the bridge is available on component mount
@@ -55,6 +57,19 @@ function App() {
     } catch (error) {
       console.error('Failed to send message to Zig:', error)
       setResponse('Error: Failed to send message')
+    }
+  }
+
+  // Handle sending a string to Zig
+  const handleSendString = async () => {
+    if (!stringMessage) return
+
+    try {
+      const result = await sendStringToZig(stringMessage)
+      setStringResponse(result)
+    } catch (error) {
+      console.error('Failed to send string to Zig:', error)
+      setStringResponse('Error: Failed to send string')
     }
   }
 
@@ -118,6 +133,25 @@ function App() {
         </div>
         {response && (
           <p>Response: {response}</p>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>Send String to Zig</h2>
+        <div className="input-group">
+          <input
+            type="text"
+            value={stringMessage}
+            onChange={(e) => setStringMessage(e.target.value)}
+            placeholder="Enter a string to send to Zig"
+            disabled={!bridgeAvailable}
+          />
+          <button onClick={handleSendString} disabled={!bridgeAvailable || !stringMessage}>
+            Send
+          </button>
+        </div>
+        {stringResponse && (
+          <p>Response: {stringResponse}</p>
         )}
       </div>
     </div>

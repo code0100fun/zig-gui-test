@@ -19,6 +19,7 @@ declare global {
     toggleValue: (args: boolean) => Promise<boolean>;
     getCurrentTime: (args: string) => Promise<GetCurrentTimeResult>;
     sendMessageToZig: (args: string) => Promise<SendMessageToZigResult>;
+    sendStringToZig: (args: string) => Promise<string>;
   }
 }
 
@@ -79,12 +80,30 @@ export async function getCurrentTime(): Promise<number> {
  */
 export async function sendMessageToZig(message: string): Promise<{ status: string; message: string }> {
   try {
+    const payload = JSON.stringify({ message });
+    console.log('sendMessageToZig - payload:', payload);
     // Call the Zig function and parse the result
-    const result = await window.sendMessageToZig(JSON.stringify({ message }));
+    const result = await window.sendMessageToZig(payload);
     console.log('sendMessageToZig - result:', result);
     return result;
   } catch (error) {
     console.error('Error sending message to Zig:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sends a string to the Zig backend
+ * @param message The message to send
+ * @returns The response from Zig
+ */
+export async function sendStringToZig(message: string): Promise<string> {
+  try {
+    const result = await window.sendStringToZig(message);
+    console.log('sendStringToZig - result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error sending string to Zig:', error);
     throw error;
   }
 }
@@ -96,5 +115,7 @@ export async function sendMessageToZig(message: string): Promise<{ status: strin
 export function isBridgeAvailable(): boolean {
   return typeof window.incrementCounter === 'function' &&
          typeof window.getCurrentTime === 'function' &&
-         typeof window.sendMessageToZig === 'function';
+         typeof window.sendMessageToZig === 'function' &&
+         typeof window.sendStringToZig === 'function' &&
+         typeof window.toggleValue === 'function';
 }

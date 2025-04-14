@@ -90,40 +90,13 @@ fn createCallbackWrapper(comptime callback: anytype) WebViewCallback {
     // const ResultT = types.ResultT;
 
     return struct {
-        fn wrapper(seq: [:0]const u8, req: [:0]const u8, userdata: ?*anyopaque) void {
-            var ctx: *Context = @ptrCast(@alignCast(userdata));
+        const Self = @This();
+        fn handleRequest(ctx: *Context, seq: [:0]const u8, value: T) void {
+            std.debug.print("Request: {any}\n", .{value});
             const allocator = ctx.arena.allocator();
 
-            // Parse the JSON request
-            var str = std.mem.trimLeft(u8, req, "[\"");
-            str = std.mem.trimRight(u8, str, "\"]\n");
-
-            const payload = std.mem.replaceOwned(
-                u8,
-                allocator,
-                str,
-                "\\\"",
-                "\"",
-            ) catch unreachable;
-            defer allocator.free(payload);
-
-            // Parse the value from the JSON
-            const parsed = std.json.parseFromSlice(
-                T,
-                allocator,
-                payload,
-                .{},
-            ) catch |err| {
-                std.debug.print("Failed to parse JSON: {any}\n", .{err});
-                ctx.webview.ret(seq, 1, "{\"error\": \"Failed to parse request\"}"[0.. :0]) catch unreachable;
-                return;
-            };
-            defer parsed.deinit();
-
-            std.debug.print("Request: {any}\n", .{parsed.value});
-
             // Call the user-provided callback
-            const result = callback(ctx, parsed.value) catch |err| {
+            const result = callback(ctx, value) catch |err| {
                 std.debug.print("Error in callback: {any}\n", .{err});
                 ctx.webview.ret(seq, 1, "{\"error\": \"Failed to call callback\"}"[0.. :0]) catch unreachable;
                 return;
@@ -151,6 +124,100 @@ fn createCallbackWrapper(comptime callback: anytype) WebViewCallback {
             ctx.webview.ret(seq, 0, response_z) catch |err| {
                 std.debug.print("Error returning result: {any}\n", .{err});
             };
+        }
+
+        fn wrapper(seq: [:0]const u8, req: [:0]const u8, userdata: ?*anyopaque) void {
+            var ctx: *Context = @ptrCast(@alignCast(userdata));
+            const allocator = ctx.arena.allocator();
+
+            // Parse the request as a generic JSON value first
+            const json_value = std.json.parseFromSlice(
+                std.json.Value,
+                allocator,
+                req,
+                .{},
+            ) catch |err| {
+                std.debug.print("Failed to parse JSON: {any}\n", .{err});
+                ctx.webview.ret(seq, 1, "{\"error\": \"Failed to parse JSON\"}"[0.. :0]) catch unreachable;
+                return;
+            };
+            defer json_value.deinit();
+
+            // Return an error if the request is not an array with at least one item
+            if (json_value.value != .array or json_value.value.array.items.len == 0) {
+                std.debug.print("Expected JSON array with at least one item\n", .{});
+                ctx.webview.ret(seq, 1, "{\"error\": \"Expected JSON array with at least one item\"}"[0.. :0]) catch unreachable;
+                return;
+            }
+
+            for (json_value.value.array.items) |item| {
+                switch (item) {
+                    .bool => {
+                        // Handle boolean values directly
+                        if (@typeInfo(T) == .bool) {
+                            Self.handleRequest(ctx, seq, item.bool);
+                        } else {
+                            std.debug.print("Failed to handle boolean value\n", .{});
+                            ctx.webview.ret(seq, 1, "{\"error\": \"Failed to handle boolean value\"}"[0.. :0]) catch continue;
+                            continue;
+                        }
+                    },
+                    .number_string, .integer, .float => {
+                        // Convert to JSON string and parse as T
+                        const payload = std.json.stringifyAlloc(
+                            allocator,
+                            item,
+                            .{},
+                        ) catch |err| {
+                            std.debug.print("Failed to stringify JSON: {any}\n", .{err});
+                            ctx.webview.ret(seq, 1, "{\"error\": \"Failed to stringify JSON\"}"[0.. :0]) catch continue;
+                            continue;
+                        };
+                        defer allocator.free(payload);
+
+                        const parsed = std.json.parseFromSlice(
+                            T,
+                            allocator,
+                            payload,
+                            .{},
+                        ) catch |err| {
+                            std.debug.print("Failed to parse JSON: {any}\n", .{err});
+                            ctx.webview.ret(seq, 1, "{\"error\": \"Failed to parse JSON\"}"[0.. :0]) catch continue;
+                            continue;
+                        };
+                        defer parsed.deinit();
+
+                        Self.handleRequest(ctx, seq, parsed.value);
+                    },
+                    .string => {
+                        // if the function takes a raw string ([]const u8), handle it directly else assume the string is
+                        // a valid JSON string and decode directly into the type taken by the callback
+                        if (T == []const u8) {
+                            Self.handleRequest(ctx, seq, item.string);
+                        } else {
+                            // assume the string is a valid JSON string and decode directly into the type taken by the callback
+                            const parsed = std.json.parseFromSlice(
+                                T,
+                                allocator,
+                                item.string,
+                                .{},
+                            ) catch |err| {
+                                std.debug.print("Failed to parse JSON: {any}\n", .{err});
+                                ctx.webview.ret(seq, 1, "{\"error\": \"Failed to parse JSON\"}"[0.. :0]) catch continue;
+                                continue;
+                            };
+                            defer parsed.deinit();
+
+                            Self.handleRequest(ctx, seq, parsed.value);
+                        }
+                    },
+                    else => {
+                        std.debug.print("Unknown JSON value: {any}\n", .{item});
+                        ctx.webview.ret(seq, 1, "{\"error\": \"Unknown JSON value\"}"[0.. :0]) catch continue;
+                        continue;
+                    },
+                }
+            }
         }
     }.wrapper;
 }

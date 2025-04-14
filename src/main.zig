@@ -32,10 +32,11 @@ pub fn main() !void {
     defer bridge.destroy(&zigui) catch unreachable;
 
     // Register the JavaScript callback with our implementation
+    try bridge.bind(&zigui, "toggleValue", toggleValue);
     try bridge.bind(&zigui, "incrementCounter", incrementCounter);
     try bridge.bind(&zigui, "getCurrentTime", getCurrentTime);
     try bridge.bind(&zigui, "sendMessageToZig", sendMessageToZig);
-    try bridge.bind(&zigui, "toggleValue", toggleValue);
+    try bridge.bind(&zigui, "sendStringToZig", sendStringToZig);
 
     try bridge.run(&zigui);
 }
@@ -59,8 +60,15 @@ fn getCurrentTime(_: *bridge.Context, _: GetCurrentTimeArg) anyerror!GetCurrentT
     return GetCurrentTimeResult{ .timestamp = ms };
 }
 
-fn sendMessageToZig(_: *bridge.Context, parsed: SendMessageToZigArg) anyerror!SendMessageToZigResult {
-    // Log the message and return a success status
+fn sendMessageToZig(ctx: *bridge.Context, parsed: SendMessageToZigArg) anyerror!SendMessageToZigResult {
+    // Print the message and return a success status
     std.debug.print("Received message: {s}\n", .{parsed.message});
-    return SendMessageToZigResult{ .status = "success", .message = "Message received" };
+    const message = try std.fmt.allocPrint(ctx.arena.allocator(), "Hello {s}", .{parsed.message});
+    return SendMessageToZigResult{ .status = "success", .message = message };
+}
+
+fn sendStringToZig(ctx: *bridge.Context, message: []const u8) anyerror![]const u8 {
+    // Print the message as a string
+    std.debug.print("Received message: {s}\n", .{message});
+    return try std.fmt.allocPrint(ctx.arena.allocator(), "Hello {s}", .{message});
 }
