@@ -35,14 +35,21 @@ pub fn main() !void {
     try bridge.bind(&zigui, "incrementCounter", incrementCounter);
     try bridge.bind(&zigui, "getCurrentTime", getCurrentTime);
     try bridge.bind(&zigui, "sendMessageToZig", sendMessageToZig);
+    try bridge.bind(&zigui, "toggleValue", toggleValue);
 
     try bridge.run(&zigui);
 }
 
-fn incrementCounter(_: *bridge.Context, parsed: IncrementCounterArg) anyerror!IncrementCounterResult {
+fn toggleValue(_: *bridge.Context, value: bool) anyerror!bool {
+    // Simply toggle the value and return the new value
+    std.debug.print("Toggling value: {any} to {any}\n", .{ value, !value });
+    return !value;
+}
+
+fn incrementCounter(_: *bridge.Context, value: u32) anyerror!u32 {
     // Simply increment the counter and return the new value
-    std.debug.print("Incrementing counter: {d}\n", .{parsed.value});
-    return IncrementCounterResult{ .result = parsed.value + 1 };
+    std.debug.print("Incrementing counter: {d}\n", .{value});
+    return value + 1;
 }
 
 fn getCurrentTime(_: *bridge.Context, _: GetCurrentTimeArg) anyerror!GetCurrentTimeResult {

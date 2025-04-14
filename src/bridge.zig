@@ -87,7 +87,7 @@ fn inferCallbackTypes(comptime callback: anytype) struct { T: type, ResultT: typ
 fn createCallbackWrapper(comptime callback: anytype) WebViewCallback {
     const types = inferCallbackTypes(callback);
     const T = types.T;
-    const ResultT = types.ResultT;
+    // const ResultT = types.ResultT;
 
     return struct {
         fn wrapper(seq: [:0]const u8, req: [:0]const u8, userdata: ?*anyopaque) void {
@@ -120,6 +120,8 @@ fn createCallbackWrapper(comptime callback: anytype) WebViewCallback {
             };
             defer parsed.deinit();
 
+            std.debug.print("Request: {any}\n", .{parsed.value});
+
             // Call the user-provided callback
             const result = callback(ctx, parsed.value) catch |err| {
                 std.debug.print("Error in callback: {any}\n", .{err});
@@ -127,27 +129,23 @@ fn createCallbackWrapper(comptime callback: anytype) WebViewCallback {
                 return;
             };
 
-            // Create the response
-            // if the result is a struct, we need to convert it to a JSON string
-            const result_struct = switch (@typeInfo(ResultT)) {
-                .@"struct" => result,
-                else => .{ .result = result },
-            };
-
             const response = std.json.stringifyAlloc(
                 allocator,
-                result_struct,
+                result,
                 .{
                     .whitespace = .minified,
                 },
             ) catch "{\"error\": \"Failed to create response\"}";
+            defer allocator.free(response);
 
             const response_z = std.fmt.allocPrintZ(
                 allocator,
                 "{s}",
                 .{response},
             ) catch "{\"error\": \"Failed to create response\"}"[0.. :0];
-            defer allocator.free(response);
+            defer allocator.free(response_z);
+
+            std.debug.print("Response: {s}\n", .{response_z});
 
             // Return the result
             ctx.webview.ret(seq, 0, response_z) catch |err| {

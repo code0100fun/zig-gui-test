@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { incrementCounter, getCurrentTime, sendMessageToZig, isBridgeAvailable } from './lib/zigBridge'
+import { incrementCounter, toggleValue, getCurrentTime, sendMessageToZig, isBridgeAvailable } from './lib/zigBridge'
 
 function App() {
   const [count, setCount] = useState(0)
   const [zigCount, setZigCount] = useState(0)
+  const [zigToggle, setZigToggle] = useState(false)
   const [currentTime, setCurrentTime] = useState<number | null>(null)
   const [message, setMessage] = useState('')
   const [response, setResponse] = useState('')
@@ -25,6 +26,15 @@ function App() {
     }
   }
 
+  // Handle toggling the value in Zig
+  const handleZigToggle = async () => {
+    try {
+      const result = await toggleValue(zigToggle)
+      setZigToggle(result)
+    } catch (error) {
+      console.error('Failed to toggle value in Zig:', error)
+    }
+  }
   // Handle getting the current time from Zig
   const handleGetTime = async () => {
     try {
@@ -71,6 +81,14 @@ function App() {
         <p>This counter is incremented by the Zig backend</p>
         <button onClick={handleZigIncrement} disabled={!bridgeAvailable}>
           Zig count is {zigCount}
+        </button>
+      </div>
+
+      <div className="card">
+        <h2>Zig Toggle Value (Bridge Demo)</h2>
+        <p>This toggles a boolean value in Zig</p>
+        <button onClick={handleZigToggle} disabled={!bridgeAvailable}>
+          Zig toggle is {zigToggle ? 'true' : 'false'}
         </button>
       </div>
 

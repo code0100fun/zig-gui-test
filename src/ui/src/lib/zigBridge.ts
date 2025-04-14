@@ -2,11 +2,6 @@
  * This module provides a bridge between the JavaScript frontend and Zig backend.
  * It exposes functions that communicate with the Zig code through the WebView.
  */
-
-type IncrementCounterResult = {
-  result: number;
-};
-
 type GetCurrentTimeResult = {
   timestamp: number;
 };
@@ -20,7 +15,8 @@ type SendMessageToZigResult = {
 declare global {
   interface Window {
     // These functions are injected by the Zig WebView
-    incrementCounter: (args: string) => Promise<IncrementCounterResult>;
+    incrementCounter: (args: number) => Promise<number>;
+    toggleValue: (args: boolean) => Promise<boolean>;
     getCurrentTime: (args: string) => Promise<GetCurrentTimeResult>;
     sendMessageToZig: (args: string) => Promise<SendMessageToZigResult>;
   }
@@ -34,11 +30,28 @@ declare global {
 export async function incrementCounter(value: number): Promise<number> {
   try {
     // Call the Zig function and parse the result
-    const result = await window.incrementCounter(JSON.stringify({ value }));
+    const result = await window.incrementCounter(value);
     console.log('incrementCounter - result:', result);
-    return result.result;
+    return result;
   } catch (error) {
     console.error('Error incrementing counter:', error);
+    throw error;
+  }
+}
+
+/**
+ * Toggles a boolean value in the Zig backend
+ * @param value The current boolean value
+ * @returns The toggled boolean value
+ */
+export async function toggleValue(value: boolean): Promise<boolean> {
+  try {
+    // Call the Zig function and parse the result
+    const result = await window.toggleValue(value);
+    console.log('toggleValue - result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error toggling value:', error);
     throw error;
   }
 }
